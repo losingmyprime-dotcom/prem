@@ -1,0 +1,1309 @@
+
+local Script;
+for i,v in next, getgc() do
+    if type(v) == "function" then
+        if islclosure(v) and not iscclosure(v) then
+            if tostring(getfenv(v).script) == "LocalScript" then
+                Script = getfenv(v)
+            end
+        end
+    end
+end
+_G.BYPASS_ACTIVE = false
+local OldIndex;
+OldIndex = hookmetamethod(game, "__index", newcclosure(function(Self, Method, ...)    
+    if getfenv(debug.info(2, "f")) == Script then
+        return wait(9e9)
+    end
+    return OldIndex(Self, Method, ...)
+end))
+
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
+
+local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.ResetOnSpawn = false
+gui.Name = "MystrixHub"
+
+local C = {
+	BG = Color3.fromRGB(3,3,3),
+	CARD = Color3.fromRGB(8,8,8),
+	ACCENT = Color3.fromRGB(0,140,255),
+	TEXT = Color3.fromRGB(255,255,255),
+	SUB = Color3.fromRGB(120,120,120)
+}
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,330,0,430)
+main.Position = UDim2.new(0.5,-165,0.5,-215)
+main.BackgroundColor3 = C.BG
+main.BackgroundTransparency = 0.15
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+
+for i = 1,40 do
+	local dot = Instance.new("Frame", main)
+	dot.Size = UDim2.new(0,2,0,2)
+	dot.Position = UDim2.new(math.random(),0,math.random(),0)
+	dot.BackgroundColor3 = Color3.new(1,1,1)
+	dot.BackgroundTransparency = math.random(2,6)/10
+	dot.BorderSizePixel = 0
+	local speed = math.random(1,3)/30000
+	RunService.RenderStepped:Connect(function()
+		dot.Position += UDim2.new(0,0,speed,0)
+		dot.BackgroundTransparency = 0.3 + math.sin(tick()*1.5 + i)/4
+		if dot.Position.Y.Scale > 1 then
+			dot.Position = UDim2.new(math.random(),0,0,0)
+		end
+	end)
+end
+
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1,0,0,55)
+header.BackgroundTransparency = 1
+
+local title = Instance.new("TextLabel", header)
+title.Text = "Mystrix Hub - Arena"
+title.Size = UDim2.new(1,0,0,25)
+title.Position = UDim2.new(0,0,0,5)
+title.TextColor3 = C.TEXT
+title.Font = Enum.Font.GothamBold
+title.TextSize = 15
+title.BackgroundTransparency = 1
+
+local discord = Instance.new("TextButton", header)
+discord.Text = "https://discord.gg/XV66VWqAaN"
+discord.Size = UDim2.new(1,0,0,18)
+discord.Position = UDim2.new(0,0,0,28)
+discord.BackgroundTransparency = 1
+discord.TextColor3 = C.ACCENT
+discord.Font = Enum.Font.Gotham
+discord.TextSize = 11
+discord.MouseButton1Click:Connect(function()
+	if setclipboard then setclipboard("https://discord.gg/XV66VWqAaN") end
+end)
+
+local function styleBtn(btn)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=C.ACCENT}):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=C.CARD}):Play()
+	end)
+end
+
+local close = Instance.new("TextButton", header)
+close.Text = "×"
+close.Size = UDim2.new(0,24,0,24)
+close.Position = UDim2.new(1,-30,0,6)
+close.BackgroundColor3 = C.CARD
+close.TextColor3 = C.TEXT
+close.Font = Enum.Font.GothamBold
+close.TextSize = 18
+styleBtn(close)
+
+local mini = Instance.new("TextButton", header)
+mini.Text = "−"
+mini.Size = UDim2.new(0,24,0,24)
+mini.Position = UDim2.new(1,-58,0,6)
+mini.BackgroundColor3 = C.CARD
+mini.TextColor3 = C.TEXT
+mini.Font = Enum.Font.GothamBold
+mini.TextSize = 18
+styleBtn(mini)
+
+local pill = Instance.new("TextButton", gui)
+pill.Size = UDim2.new(0,140,0,38)
+pill.Position = UDim2.new(0,20,0.5,-19)
+pill.BackgroundColor3 = Color3.fromRGB(15,15,15)
+pill.BackgroundTransparency = 0.1
+pill.Text = "Mystrix Hub"
+pill.TextColor3 = Color3.fromRGB(255,255,255)
+pill.Font = Enum.Font.Code
+pill.TextSize = 14
+pill.Visible = false
+pill.BorderSizePixel = 0
+Instance.new("UICorner", pill).CornerRadius = UDim.new(0,6)
+
+local pillStroke = Instance.new("UIStroke", pill)
+pillStroke.Color = Color3.fromRGB(45, 45, 45)
+pillStroke.Thickness = 1.2
+
+local pillDragging, pillStart, pillPos
+pill.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		pillDragging = true
+		pillStart = input.Position
+		pillPos = pill.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then pillDragging = false end
+		end)
+	end
+end)
+UIS.InputChanged:Connect(function(input)
+	if pillDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - pillStart
+		pill.Position = UDim2.new(pillPos.X.Scale, pillPos.X.Offset + delta.X, pillPos.Y.Scale, pillPos.Y.Offset + delta.Y)
+	end
+end)
+
+local mainDragging, mainStart, mainPos
+header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		mainDragging = true
+		mainStart = input.Position
+		mainPos = main.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then mainDragging = false end
+		end)
+	end
+end)
+UIS.InputChanged:Connect(function(input)
+	if mainDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - mainStart
+		main.Position = UDim2.new(mainPos.X.Scale, mainPos.X.Offset + delta.X, mainPos.Y.Scale, mainPos.Y.Offset + delta.Y)
+	end
+end)
+
+UIS.InputBegan:Connect(function(i,gp)
+	if not gp and i.KeyCode==Enum.KeyCode.K then
+		main.Visible = not main.Visible
+		pill.Visible = not main.Visible
+	end
+end)
+
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+mini.MouseButton1Click:Connect(function() main.Visible=false; pill.Visible=true end)
+pill.MouseButton1Click:Connect(function() main.Visible=true; pill.Visible=false end)
+
+local content = Instance.new("Frame", main)
+content.Position = UDim2.new(0,10,0,60)
+content.Size = UDim2.new(1,-20,1,-70)
+content.BackgroundTransparency = 1
+
+local col1 = Instance.new("Frame", content)
+col1.Size = UDim2.new(0.5,-5,1,0)
+col1.BackgroundTransparency = 1
+local l1 = Instance.new("UIListLayout", col1)
+l1.Padding = UDim.new(0,6)
+
+local col2 = Instance.new("Frame", content)
+col2.Size = UDim2.new(0.5,-5,1,0)
+col2.Position = UDim2.new(0.5,5,0,0)
+col2.BackgroundTransparency = 1
+local l2 = Instance.new("UIListLayout", col2)
+l2.Padding = UDim.new(0,6)
+
+local function keybox(parent,key)
+	local b=Instance.new("TextLabel",parent)
+	b.Size=UDim2.new(0,18,0,18)
+	b.Position=UDim2.new(0,6,0.5,-9)
+	b.Text=key
+	b.BackgroundColor3=C.ACCENT
+	b.TextColor3=Color3.new(1,1,1)
+	b.Font=Enum.Font.GothamBold
+	b.TextSize=9
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,4)
+	return b
+end
+
+local function addToggle(parent, text, key, defaultState, callback)
+	local row=Instance.new("Frame",parent)
+	row.Size=UDim2.new(1,0,0,32)
+	row.BackgroundColor3=C.CARD
+	row.BackgroundTransparency=0.1
+	Instance.new("UICorner",row)
+
+	if key ~= "" then keybox(row,key) end
+
+	local label=Instance.new("TextLabel",row)
+	label.Text=text
+	label.Position=UDim2.new(0,key ~= "" and 30 or 10,0,0)
+	label.Size=UDim2.new(1,-70,1,0)
+	label.BackgroundTransparency=1
+	label.TextColor3=C.TEXT
+	label.Font=Enum.Font.Gotham
+	label.TextSize=11
+	label.TextXAlignment=Enum.TextXAlignment.Left
+
+	local btn=Instance.new("Frame",row)
+	btn.Size=UDim2.new(0,32,0,16)
+	btn.Position=UDim2.new(1,-36,0.5,-8)
+	btn.BackgroundColor3=Color3.fromRGB(30,30,30)
+	Instance.new("UICorner",btn)
+
+	local knob=Instance.new("Frame",btn)
+	knob.Size=UDim2.new(0,12,0,12)
+	knob.Position=UDim2.new(0,2,0.5,-6)
+	knob.BackgroundColor3=Color3.new(1,1,1)
+	Instance.new("UICorner",knob)
+
+	local state = defaultState or false
+	local function update()
+		TweenService:Create(knob,TweenInfo.new(0.15),{
+			Position=state and UDim2.new(1,-14,0.5,-6) or UDim2.new(0,2,0.5,-6)
+		}):Play()
+		btn.BackgroundColor3=state and C.ACCENT or Color3.fromRGB(30,30,30)
+		if callback then callback(state) end
+	end
+
+	row.MouseEnter:Connect(function()
+		TweenService:Create(row,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(15,15,15)}):Play()
+	end)
+	row.MouseLeave:Connect(function()
+		TweenService:Create(row,TweenInfo.new(0.15),{BackgroundColor3=C.CARD}):Play()
+	end)
+	row.InputBegan:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+			state=not state; update()
+		end
+	end)
+	if key ~= "" then
+		UIS.InputBegan:Connect(function(i, gp)
+			if not gp and i.KeyCode == Enum.KeyCode[key:upper()] then
+				state = not state; update()
+			end
+		end)
+	end
+	update()
+
+	local obj = {}
+	function obj:SetState(newState)
+		if state ~= newState then state = newState; update() end
+	end
+	return obj
+end
+
+local function addSlider(parent, text, minVal, maxVal, defaultVal, callback)
+	local f=Instance.new("Frame",parent)
+	f.Size=UDim2.new(1,0,0,45)
+	f.BackgroundColor3=C.CARD
+	f.BackgroundTransparency=0.1
+	Instance.new("UICorner",f)
+
+	local label=Instance.new("TextLabel",f)
+	label.Text=text
+	label.Position=UDim2.new(0,6,0,2)
+	label.Size=UDim2.new(1,-40,0,18)
+	label.TextColor3=C.TEXT
+	label.BackgroundTransparency=1
+	label.Font=Enum.Font.Gotham
+	label.TextSize=11
+	label.TextXAlignment=Enum.TextXAlignment.Left
+
+	local val=Instance.new("TextLabel",f)
+	val.Text=tostring(defaultVal)
+	val.Position=UDim2.new(1,-30,0,2)
+	val.Size=UDim2.new(0,30,0,18)
+	val.TextColor3=C.ACCENT
+	val.BackgroundTransparency=1
+	val.Font=Enum.Font.GothamBold
+	val.TextSize=11
+
+	local bar=Instance.new("Frame",f)
+	bar.Size=UDim2.new(1,-12,0,4)
+	bar.Position=UDim2.new(0,6,0,28)
+	bar.BackgroundColor3=Color3.fromRGB(30,30,30)
+	Instance.new("UICorner",bar)
+
+	local fill=Instance.new("Frame",bar)
+	local pct=(defaultVal-minVal)/(maxVal-minVal)
+	fill.Size=UDim2.new(pct,0,1,0)
+	fill.BackgroundColor3=C.ACCENT
+	Instance.new("UICorner",fill)
+
+	local knob=Instance.new("Frame",bar)
+	knob.Size=UDim2.new(0,10,0,10)
+	knob.Position=UDim2.new(pct,-5,0.5,-5)
+	knob.BackgroundColor3=Color3.new(1,1,1)
+	Instance.new("UICorner",knob)
+
+	local drag=false
+	local function setValue(p)
+		p=math.clamp(p,0,1)
+		local cur=minVal+p*(maxVal-minVal)
+		cur=math.floor(cur+0.5)
+		local newPct=(cur-minVal)/(maxVal-minVal)
+		fill.Size=UDim2.new(newPct,0,1,0)
+		knob.Position=UDim2.new(newPct,-5,0.5,-5)
+		val.Text=tostring(cur)
+		if callback then callback(cur) end
+	end
+
+	bar.InputBegan:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+			drag=true
+			local p=(i.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X
+			setValue(p)
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+			drag=false
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if drag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+			local p=(i.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X
+			setValue(p)
+		end
+	end)
+	callback(defaultVal)
+end
+
+-- ==================== ARENA AUTO FARM LOGIC ====================
+local A = {
+	enabled       = false,
+	token         = 0,
+	task          = nil,
+	flySpeed      = 500,
+	V3_ASCEND     = 80,
+	START_POS     = Vector3.new(55.941, 3.25, -1.214),
+	centerPos     = nil,
+	lockedY       = nil,
+	activeBV      = nil,
+	promptCache   = {},
+	promptDistCache = {},
+	platformParts  = {},
+	platformNoclipConn = nil,
+	trackerConn   = nil,
+	trackedTarget = nil,
+	trackedPos    = nil,
+	tweenToBase   = true,
+	pollConn      = nil,
+	pollTarget    = nil,
+	pollTargetPos = nil,
+	pollHasTarget = false,
+	pollTargetGone = false,
+}
+
+do
+	local function initFlySpeed()
+		local lowerName = player.Name:lower()
+		if lowerName:find("pendupe_h") or lowerName:find("pusingbat") then return 3200 end
+		local ok, cs = pcall(function() return player:GetAttribute("CurrentSpeed") end)
+		if ok and type(cs) == "number" and cs > 0 then
+			local hasBoost = (player:GetAttribute("HasSpeedBoost") == true)
+			return cs * (hasBoost and 4 or 2)
+		end
+		return 500
+	end
+	A.flySpeed = initFlySpeed()
+end
+
+local BRAINROT_RARITY_ORDER = {
+	"Paradox","Infinity","Divine","Celestial",
+	"Secret","Cosmic","Mythical","Legendary","Epic","Rare","Uncommon","Common"
+}
+local A_TARGET_RARITIES = { Paradox=true, Infinity=true, Divine=true }
+local RARITY_PRIORITY = {}
+for i, r in ipairs(BRAINROT_RARITY_ORDER) do RARITY_PRIORITY[r] = i end
+
+local BRAINROT_LISTS    = {}
+local brainrotRarityMap = {}
+
+do
+	local ok, brainrotsFolder = pcall(function()
+		return ReplicatedStorage:WaitForChild("Assets",10):WaitForChild("Brainrots",10)
+	end)
+	if ok and brainrotsFolder then
+		for _, rarityName in ipairs(BRAINROT_RARITY_ORDER) do
+			local rarityFolder = brainrotsFolder:FindFirstChild(rarityName)
+			BRAINROT_LISTS[rarityName] = {}
+			if rarityFolder and rarityFolder:IsA("Folder") then
+				for _, br in ipairs(rarityFolder:GetChildren()) do
+					if br:IsA("Folder") or br:IsA("Model") then
+						local n = br.Name
+						table.insert(BRAINROT_LISTS[rarityName], n)
+						brainrotRarityMap[n] = rarityName
+					end
+				end
+				table.sort(BRAINROT_LISTS[rarityName])
+			end
+		end
+	end
+end
+
+local function getBrainrotRarity(name)
+	if not name then return nil end
+	if brainrotRarityMap[name] then return brainrotRarityMap[name] end
+	local af = Workspace:FindFirstChild("ArenaBrainrots")
+	if not af then return nil end
+	for _, child in ipairs(af:GetChildren()) do
+		if child.Name == "RenderedBrainrot" then
+			local bn = child:GetAttribute("BrainrotName") or child.Name
+			if bn == name then
+				local rar = child:GetAttribute("Rarity")
+				if rar then return rar end
+				return nil
+			end
+		end
+	end
+	return nil
+end
+
+local function fetchCenterPos()
+	local go=Workspace:FindFirstChild("GameObjects")
+	local ps=go and go:FindFirstChild("PlaceSpecific")
+	local ar=ps and ps:FindFirstChild("tsunami_arena")
+	local sp=ar and ar:FindFirstChild("BrainrotSpawn")
+	if not sp then return nil end
+	local pos
+	pcall(function() pos=sp:GetPivot().Position end)
+	if not pos then
+		for _,d in ipairs(sp:GetDescendants()) do
+			if d:IsA("BasePart") then pos=d.Position; break end
+		end
+		if not pos and sp:IsA("BasePart") then pos=sp.Position end
+	end
+	return pos
+end
+
+local function getBrainrotSpawnSurfaceY()
+	local go=Workspace:FindFirstChild("GameObjects")
+	local ps=go and go:FindFirstChild("PlaceSpecific")
+	local ar=ps and ps:FindFirstChild("tsunami_arena")
+	local sp=ar and ar:FindFirstChild("BrainrotSpawn")
+	if not sp then return nil end
+	local maxTopY=-math.huge; local found=false
+	local function scanParts(obj)
+		for _,d in ipairs(obj:GetDescendants()) do
+			if d:IsA("BasePart") then
+				local topY=d.Position.Y+d.Size.Y/2
+				if topY>maxTopY then maxTopY=topY; found=true end
+			end
+		end
+		if obj:IsA("BasePart") then
+			local topY=obj.Position.Y+obj.Size.Y/2
+			if topY>maxTopY then maxTopY=topY; found=true end
+		end
+	end
+	pcall(scanParts, sp)
+	if not found then
+		pcall(function()
+			local piv=sp:GetPivot().Position
+			if piv then maxTopY=piv.Y; found=true end
+		end)
+	end
+	return found and maxTopY or nil
+end
+
+local PLATFORM_Y    = -10
+local PLATFORM_THICK= 5
+local PLATFORM_HALF = 5000
+local PLATFORM_SEG  = 2048
+
+local function removePlatform()
+	if A.platformNoclipConn then A.platformNoclipConn:Disconnect(); A.platformNoclipConn=nil end
+	for _,p in ipairs(A.platformParts) do pcall(function() p:Destroy() end) end
+	A.platformParts={}
+end
+
+local function buildPlatform(centerX, centerZ)
+	removePlatform()
+	local minX=centerX-PLATFORM_HALF; local maxX=centerX+PLATFORM_HALF
+	local minZ=centerZ-PLATFORM_HALF; local maxZ=centerZ+PLATFORM_HALF
+	local cursorX=minX
+	while cursorX<maxX do
+		local segW=math.min(PLATFORM_SEG,maxX-cursorX); local cursorZ=minZ
+		while cursorZ<maxZ do
+			local segD=math.min(PLATFORM_SEG,maxZ-cursorZ)
+			local p=Instance.new("Part")
+			p.Name="AutoArenaPlatform"; p.Anchored=true; p.CanCollide=true
+			p.CanTouch=false; p.CanQuery=false
+			p.Size=Vector3.new(segW,PLATFORM_THICK,segD)
+			p.CFrame=CFrame.new(cursorX+segW/2,PLATFORM_Y,cursorZ+segD/2)
+			p.Material=Enum.Material.SmoothPlastic; p.BrickColor=BrickColor.new("Bright red")
+			p.Transparency=0.5; p.Locked=true; p.Parent=Workspace
+			table.insert(A.platformParts,p)
+			cursorZ=cursorZ+segD
+		end
+		cursorX=cursorX+segW
+	end
+	A.platformNoclipConn=RunService.Heartbeat:Connect(function()
+		for _,p in ipairs(A.platformParts) do
+			if p and p.Parent then p.CanCollide=true end
+		end
+	end)
+end
+
+local function setupPlatform()
+	task.spawn(function()
+		for i=1,15 do
+			local pos=fetchCenterPos()
+			if pos then A.centerPos=pos; buildPlatform(pos.X,pos.Z); return end
+			task.wait(1)
+		end
+		buildPlatform(0,0)
+	end)
+end
+
+local function startNoclip() end
+
+local function getRoot()
+	local c=player.Character; return c and c:FindFirstChild("HumanoidRootPart")
+end
+local function getHumanoid()
+	local c=player.Character; return c and c:FindFirstChildOfClass("Humanoid")
+end
+local function waitAlive()
+	local char=player.Character
+	if not char then char=player.CharacterAdded:Wait() end
+	local hrp=char:WaitForChild("HumanoidRootPart",15)
+	local hum=char:WaitForChild("Humanoid",15)
+	if not hrp or not hum then
+		char=player.CharacterAdded:Wait()
+		hrp=char:WaitForChild("HumanoidRootPart",15)
+		hum=char:WaitForChild("Humanoid",15)
+	end
+	local t=tick()+10
+	while tick()<t do
+		local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if h and h.Health>0 then break end
+		task.wait(0.1)
+	end
+end
+local function readFlySpeed()
+	local ok2,cs=pcall(function() return player:GetAttribute("CurrentSpeed") end)
+	if ok2 and type(cs)=="number" and cs>0 then
+		A.flySpeed=cs*(player:GetAttribute("HasSpeedBoost")==true and 4 or 2)
+	end
+end
+local function anchorChar(_val) end
+
+local function createBV(root)
+	if A.activeBV then pcall(function() A.activeBV:Destroy() end) end
+	A.activeBV=Instance.new("BodyVelocity")
+	A.activeBV.MaxForce=Vector3.new(1e5,1e5,1e5); A.activeBV.P=1250
+	A.activeBV.Velocity=Vector3.zero; A.activeBV.Parent=root
+end
+local function destroyBV()
+	if A.activeBV then pcall(function() A.activeBV:Destroy() end); A.activeBV=nil end
+end
+
+local function clamp(v,mn,mx) return math.max(mn,math.min(mx,v)) end
+
+local function flyToPos(targetPos, speed, checkFn)
+	local root=getRoot(); if not root then return false end
+	speed=clamp(speed or A.flySpeed,1,5000)
+	local isLive=type(targetPos)=="function"
+	while checkFn and checkFn() do
+		root=getRoot(); if not root then break end
+		local dest=isLive and targetPos() or targetPos
+		if dest==nil then break end
+		local cur=root.Position; local dir=dest-cur; local dist=dir.Magnitude
+		if dist<=0.5 then return true end
+		local dt=RunService.Heartbeat:Wait()
+		local step=dir.Unit*math.min(speed*dt,dist)
+		pcall(function() if root.AssemblyLinearVelocity then root.AssemblyLinearVelocity=Vector3.zero end end)
+		local look=Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.LookVector or Vector3.new(0,0,-1)
+		root.CFrame=CFrame.new(cur+step,cur+step+look)
+	end
+	return false
+end
+
+local function hasBrainrotEquipped()
+	local c=player.Character
+	if c then
+		for _,v in ipairs(c:GetChildren()) do
+			if v:IsA("Model") and CollectionService:HasTag(v,"ArenaBrainrot") then return true end
+		end
+	end
+	local pf=Workspace:FindFirstChild(player.Name)
+	if pf and pf:FindFirstChild("RenderedBrainrot") then return true end
+	return false
+end
+
+local cachedBasePart    = nil
+local cachedBaseRefresh = 0
+
+local function getOwnBasePart()
+	local now=os.clock()
+	if cachedBasePart and cachedBasePart.Parent and now-cachedBaseRefresh<10 then
+		return cachedBasePart
+	end
+	local basesFolder=Workspace:FindFirstChild("Bases")
+	if not basesFolder then return nil end
+	for _,folder in ipairs(basesFolder:GetChildren()) do
+		if folder:GetAttribute("Holder")==player.UserId then
+			local sp=folder:FindFirstChild("Spawn")
+			if sp then cachedBasePart=sp; cachedBaseRefresh=now; return sp end
+			for _,p in ipairs(folder:GetDescendants()) do
+				if p:IsA("BasePart") then cachedBasePart=p; cachedBaseRefresh=now; return p end
+			end
+		end
+	end
+	return nil
+end
+
+local cachedLaneFloorCenter=nil
+
+local function getNearestLaneFloorCenter()
+	if cachedLaneFloorCenter then return cachedLaneFloorCenter end
+	local basePart=getOwnBasePart()
+	if not basePart then return nil end
+	local basePos=basePart.Position
+	local go=Workspace:FindFirstChild("GameObjects")
+	local ps=go and go:FindFirstChild("PlaceSpecific")
+	local ta=ps and ps:FindFirstChild("tsunami_arena")
+	local lanes=ta and ta:FindFirstChild("Lanes")
+	if not lanes then return nil end
+	local bestCenter=nil; local bestDist=math.huge
+	for _,lane in ipairs(lanes:GetChildren()) do
+		for _,floor in ipairs(lane:GetChildren()) do
+			if floor.Name=="Floor" and floor:IsA("BasePart") then
+				local fp=floor.Position
+				local dist=(Vector3.new(fp.X,0,fp.Z)-Vector3.new(basePos.X,0,basePos.Z)).Magnitude
+				if dist<bestDist then
+					bestDist=dist
+					bestCenter=Vector3.new(fp.X,fp.Y+(floor.Size.Y/2),fp.Z)
+				end
+			end
+		end
+	end
+	if bestCenter then cachedLaneFloorCenter=bestCenter end
+	return bestCenter
+end
+
+local function handleWaveShield()
+	local char=player.Character
+	local bp=player:FindFirstChildOfClass("Backpack")
+	if not char or not bp then return end
+	local function hasCD(tool) return tool:FindFirstChild("CooldownHighlight",true)~=nil end
+	for _,tool in ipairs(char:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("WaveShield") then
+			if not hasCD(tool) then return end
+		end
+	end
+	for _,tool in ipairs(bp:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("WaveShield") and not hasCD(tool) then
+			local hum=char:FindFirstChildOfClass("Humanoid")
+			if hum then hum:EquipTool(tool) end
+			return
+		end
+	end
+end
+
+local function getCenterPos()
+	if not A.centerPos then A.centerPos=fetchCenterPos() end
+	return A.centerPos
+end
+
+local function getArenaTimerData()
+	local pg=player.PlayerGui
+	local ta=pg and pg:FindFirstChild("TsunamiArena")
+	if not ta then return nil, nil end
+	local mt=ta:FindFirstChild("MatchTimer")
+
+	if not mt then return nil, nil end
+	local timerLabel=mt:FindFirstChild("Timer")
+	local titleLabel=mt:FindFirstChild("Title")
+	local timerSecs=nil; local titleText=nil
+	if timerLabel then
+		local m,s=timerLabel.Text:match("^(%d+):(%d+)$")
+		if m and s then timerSecs=tonumber(m)*60+tonumber(s) end
+	end
+	if titleLabel then titleText=titleLabel.Text end
+	return timerSecs, titleText
+end
+
+local function shouldGoToCenter()
+	local secs, title=getArenaTimerData()
+	if not title or title=="" then
+	
+		return false
+	end
+	if title:find("STARTS IN") then
+	
+		return secs~=nil and secs<=0
+	end
+
+	return true
+end
+
+local function goToBase()
+	local basePart=getOwnBasePart()
+	if not basePart then
+		local root=getRoot()
+		if root then pcall(function() root.CFrame=CFrame.new(A.START_POS) end) end
+		return
+	end
+
+	local basePos=Vector3.new(basePart.Position.X, basePart.Position.Y+3, basePart.Position.Z)
+	local root=getRoot()
+	if not root then return end
+
+	local hum=getHumanoid()
+	if hum then hum.PlatformStand=true end
+	createBV(root)
+
+	local runRot=true
+	local brainrotDropped=false
+
+	local rotConn=RunService.Heartbeat:Connect(function()
+		if runRot and hasBrainrotEquipped() then handleWaveShield() end
+	end)
+
+	local function flightCheck()
+		if not runRot or not A.enabled then return false end
+		if not hasBrainrotEquipped() then
+			brainrotDropped=true
+			return false
+		end
+		return true
+	end
+
+	local function cleanup()
+		runRot=false
+		rotConn:Disconnect()
+		destroyBV()
+		if hum then hum.PlatformStand=false end
+	end
+
+	local center=getCenterPos()
+	if center then
+		local groundY=A.START_POS.Y
+		flyToPos(Vector3.new(center.X,groundY,center.Z), A.flySpeed, flightCheck)
+	end
+	if brainrotDropped then cleanup(); return end  
+
+	flyToPos(basePos, A.flySpeed, flightCheck)
+	if brainrotDropped then cleanup(); return end  
+
+	
+	local hrp2=getRoot()
+	if hrp2 and basePart and basePart.Parent then
+		pcall(function()
+			firetouchinterest(hrp2,basePart,0)
+			task.wait(0.05)
+			firetouchinterest(hrp2,basePart,1)
+		end)
+	end
+
+	-- Retry loop if brainrot is still equipped (needs lane-floor nudge)
+	local retryCount=0
+	while hasBrainrotEquipped() and A.enabled and retryCount<5 do
+		retryCount=retryCount+1
+		local floorCenter=getNearestLaneFloorCenter()
+		if floorCenter then
+			local floorDest=Vector3.new(floorCenter.X,floorCenter.Y+3,floorCenter.Z)
+			flyToPos(floorDest, A.flySpeed, function() return runRot and A.enabled end)
+			task.wait(0.1)
+		end
+		flyToPos(basePos, A.flySpeed, function() return runRot and A.enabled end)
+		local hrp3=getRoot()
+		if hrp3 and basePart and basePart.Parent then
+			pcall(function()
+				firetouchinterest(hrp3,basePart,0)
+				task.wait(0.05)
+				firetouchinterest(hrp3,basePart,1)
+			end)
+		end
+	end
+
+	cleanup()
+end
+-- ============================================================
+
+local function enableInstantPrompt(p)
+	if not p or not p.Parent then return end
+	if not A.promptCache[p] then A.promptCache[p]=p.HoldDuration end
+	p.HoldDuration=0; p.Enabled=true
+	if not A.promptDistCache[p] then A.promptDistCache[p]=p.MaxActivationDistance end
+	p.MaxActivationDistance=50
+end
+local function restorePromptDistance(p)
+	if not p or not p.Parent then return end
+	pcall(function()
+		if A.promptDistCache[p]~=nil then p.MaxActivationDistance=A.promptDistCache[p]; A.promptDistCache[p]=nil end
+	end)
+end
+
+local function getHeadOffset()
+	local c=player.Character; if not c then return 2 end
+	local head=c:FindFirstChild("Head"); local rootP=c:FindFirstChild("HumanoidRootPart")
+	if head and rootP then return head.Position.Y-rootP.Position.Y end
+	return 2
+end
+local function getModelPos(obj)
+	if not obj or not obj.Parent then return nil end
+	local root=obj:FindFirstChild("Root")
+	if root and root:IsA("BasePart") then return root.Position end
+	local pos; pcall(function() pos=obj:GetPivot().Position end)
+	if pos then return pos end
+	for _,d in ipairs(obj:GetDescendants()) do
+		if d:IsA("BasePart") then return d.Position end
+	end
+	if obj:IsA("BasePart") then return obj.Position end
+	return nil
+end
+
+local function startBrainrotTracker(target)
+	if A.trackerConn then A.trackerConn:Disconnect(); A.trackerConn=nil end
+	A.trackedTarget=target
+	A.trackedPos=getModelPos(target)
+	if not target or not target.Parent then return end
+	local rootPart=target:FindFirstChild("Root")
+	A.trackerConn=RunService.Heartbeat:Connect(function()
+		if not target or not target.Parent then
+			if A.trackerConn then A.trackerConn:Disconnect(); A.trackerConn=nil end
+			return
+		end
+		if rootPart and rootPart.Parent then A.trackedPos=rootPart.Position; return end
+		pcall(function() A.trackedPos=target:GetPivot().Position end)
+	end)
+end
+
+local function stopBrainrotTracker()
+	if A.trackerConn then A.trackerConn:Disconnect(); A.trackerConn=nil end
+	A.trackedTarget=nil; A.trackedPos=nil
+end
+
+local function getLivePos() return A.trackedPos end
+local function getLivePosAtY(fixedY)
+	local p=A.trackedPos; if not p then return nil end
+	return Vector3.new(p.X,fixedY,p.Z)
+end
+
+local function getBrainrotName(obj)
+	local ok2,name=pcall(function() return obj:GetAttribute("BrainrotName") end)
+	if ok2 and name and name~="" then return name end
+	return obj.Name
+end
+
+local function findNearestArenaBrainrot(fromPos)
+	local af=Workspace:FindFirstChild("ArenaBrainrots")
+	if not af then return nil,nil end
+	local candidates={}
+	for _,child in ipairs(af:GetChildren()) do
+		if child.Name=="RenderedBrainrot" then
+			local pos=getModelPos(child)
+			if pos then
+				local name=getBrainrotName(child)
+				local rarity=getBrainrotRarity(name)
+				local prio=RARITY_PRIORITY[rarity] or 999
+				local dist=(Vector3.new(pos.X,0,pos.Z)-Vector3.new(fromPos.X,0,fromPos.Z)).Magnitude
+				table.insert(candidates,{obj=child,pos=pos,prio=prio,dist=dist,rarity=rarity,name=name})
+			end
+		end
+	end
+	if #candidates==0 then return nil,nil end
+	if next(A_TARGET_RARITIES)~=nil then
+		local filtered={}
+		for _,c in ipairs(candidates) do
+			if A_TARGET_RARITIES[c.rarity] then table.insert(filtered,c) end
+		end
+		if #filtered==0 then return nil,nil end
+		candidates=filtered
+	end
+	table.sort(candidates,function(a,b)
+		if a.prio~=b.prio then return a.prio<b.prio end
+		return a.dist<b.dist
+	end)
+	local best=candidates[1]
+	return best.obj,best.pos
+end
+
+local function isBrainrotGone(target)
+	if not target then return true end
+	if not target.Parent then return true end
+	local af=Workspace:FindFirstChild("ArenaBrainrots")
+	if not af then return true end
+	return not target:IsDescendantOf(af)
+end
+
+-- Poll runs every single Heartbeat (no throttle) for fastest detection.
+local function startArenaPoll()
+	if A.pollConn then A.pollConn:Disconnect() end
+	A.pollConn=RunService.Heartbeat:Connect(function()
+		if A.pollTarget then
+			if isBrainrotGone(A.pollTarget) then
+				A.pollTargetGone=true
+				A.pollTarget=nil; A.pollTargetPos=nil; A.pollHasTarget=false
+				return
+			end
+		end
+		local root=getRoot()
+		if not root then A.pollHasTarget=false; return end
+		local obj,pos=findNearestArenaBrainrot(root.Position)
+		if obj and pos then
+			A.pollTarget=obj; A.pollTargetPos=pos; A.pollHasTarget=true
+		else
+			A.pollTarget=nil; A.pollTargetPos=nil; A.pollHasTarget=false
+		end
+	end)
+end
+
+local function getTakePrompt(target)
+	if not target or not target.Parent then return {} end
+	local prompts={}; local seen={}
+	local function addPrompt(p)
+		if p and p:IsA("ProximityPrompt") and not seen[p] then seen[p]=true; prompts[#prompts+1]=p end
+	end
+	pcall(function()
+		local ro=target:FindFirstChild("Root")
+		if ro then local tp=ro:FindFirstChild("TakePrompt"); if tp then addPrompt(tp) end end
+	end)
+	if #prompts==0 then local tp=target:FindFirstChild("TakePrompt",true); if tp then addPrompt(tp) end end
+	if #prompts==0 then for _,d in ipairs(target:GetDescendants()) do addPrompt(d) end end
+	return prompts
+end
+
+local function doPickupNormal(target, checkFn)
+	if isBrainrotGone(target) then return true end
+	if hasBrainrotEquipped() then return true end
+
+	local prompts=getTakePrompt(target)
+
+	local stickConn=RunService.Heartbeat:Connect(function()
+		for _,p in ipairs(prompts) do
+			if p and p.Parent then
+				p.HoldDuration=0; p.Enabled=true; p.MaxActivationDistance=50
+			end
+		end
+		local lp=getLivePos(); local root=getRoot()
+		if lp and root then
+			local cur=root.Position
+			local dest=Vector3.new(lp.X,cur.Y,lp.Z)
+			local dist=(dest-cur).Magnitude
+			if dist>1.5 then
+				local dir=(dest-cur).Unit; local step=math.min(dist,8)
+				pcall(function()
+					root.CFrame=CFrame.new(cur+dir*step,
+						cur+dir*step+(Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.LookVector or Vector3.new(0,0,-1)))
+				end)
+			end
+		end
+	end)
+
+	do
+		local spawnSurfaceY=getBrainrotSpawnSurfaceY()
+		if spawnSurfaceY then
+			local r2=getRoot(); local hum=getHumanoid()
+			if r2 and hum then
+				local snapY=spawnSurfaceY+getHeadOffset()
+				local lp=getLivePos()
+				if lp then
+					hum.PlatformStand=true; createBV(r2)
+					flyToPos(Vector3.new(lp.X,snapY,lp.Z), A.flySpeed, checkFn)
+					destroyBV(); hum.PlatformStand=false
+				end
+			end
+		end
+	end
+
+	local success=false
+	local timeout=tick()+15
+	local VIS=game:GetService("VirtualInputManager")
+
+	while checkFn() and tick()<timeout do
+		if hasBrainrotEquipped() then success=true; break end
+		if isBrainrotGone(target) then success=true; break end
+
+		local freshPrompts=getTakePrompt(target)
+		for _,p in ipairs(freshPrompts) do
+			if p and p.Parent then
+				p.HoldDuration=0; p.Enabled=true; p.MaxActivationDistance=50
+				pcall(function()
+					if type(fireproximityprompt)=="function" then
+						fireproximityprompt(p); fireproximityprompt(p)
+					else
+						p:InputHoldBegin(); task.wait(0.01); p:InputHoldEnd()
+					end
+				end)
+			end
+		end
+		pcall(function()
+			if VIS then
+				VIS:SendKeyEvent(true,Enum.KeyCode.E,false,game)
+				VIS:SendKeyEvent(false,Enum.KeyCode.E,false,game)
+			end
+		end)
+
+		RunService.Heartbeat:Wait()
+		if hasBrainrotEquipped() then success=true; break end
+		if isBrainrotGone(target) then success=true; break end
+	end
+
+	stickConn:Disconnect()
+	for _,p in ipairs(prompts) do restorePromptDistance(p) end
+	return success
+end
+
+local function isBrainrotBeforeCenter(fromPos, brainrotPos, center)
+	if not center then return true end
+	local distToBrainrot=(Vector3.new(brainrotPos.X,0,brainrotPos.Z)-Vector3.new(fromPos.X,0,fromPos.Z)).Magnitude
+	local distToCenter=(Vector3.new(center.X,0,center.Z)-Vector3.new(fromPos.X,0,fromPos.Z)).Magnitude
+	return distToBrainrot<=distToCenter
+end
+
+local function runModeNormal(target, targetPos, isRunning)
+	local root=getRoot(); local hum=getHumanoid()
+	if not root or not hum then return false end
+
+	local center=getCenterPos()
+	startBrainrotTracker(target)
+
+	local lockedY=root.Position.Y
+	A.lockedY=lockedY
+
+	hum.PlatformStand=true; createBV(root)
+
+	local skipCenter=isBrainrotBeforeCenter(root.Position,targetPos,center)
+	if not skipCenter and center then
+		flyToPos(Vector3.new(center.X,lockedY,center.Z), A.flySpeed, isRunning)
+		if not isRunning() then stopBrainrotTracker(); destroyBV(); hum.PlatformStand=false; return false end
+		if isBrainrotGone(target) then stopBrainrotTracker(); destroyBV(); hum.PlatformStand=false; return true end
+	end
+
+	flyToPos(function() return getLivePosAtY(lockedY) end, A.flySpeed, isRunning)
+	if not isRunning() then stopBrainrotTracker(); destroyBV(); hum.PlatformStand=false; return false end
+	if isBrainrotGone(target) then stopBrainrotTracker(); destroyBV(); hum.PlatformStand=false; return true end
+
+	destroyBV(); hum.PlatformStand=false
+
+	local picked=doPickupNormal(target, isRunning)
+	stopBrainrotTracker()
+	return picked
+end
+
+local function handleRespawn()
+	destroyBV()
+	local hum=getHumanoid(); if hum then hum.PlatformStand=false end
+	anchorChar(false)
+	local newChar=nil
+	local charConn=player.CharacterAdded:Connect(function(c) newChar=c end)
+	do
+		local c=player.Character
+		local h=c and c:FindFirstChildOfClass("Humanoid")
+		if h and h.Health>0 then newChar=c end
+	end
+	local t0=tick()
+	while not newChar and (tick()-t0<30) do RunService.Heartbeat:Wait() end
+	charConn:Disconnect()
+	task.wait(1)
+	waitAlive()
+end
+
+local function arenaLoop(token)
+	local function isRunning() return A.enabled and A.token==token end
+
+	local isDead=false; local hbFrame=0
+	local hbConn=RunService.Heartbeat:Connect(function()
+		if isDead then return end
+		hbFrame=hbFrame+1; if hbFrame<30 then return end; hbFrame=0
+		local h=getHumanoid(); if not h or h.Health<=0 then isDead=true end
+	end)
+
+	waitAlive(); if not isRunning() then hbConn:Disconnect(); return end
+	readFlySpeed()
+
+	while isRunning() do
+
+		if hasBrainrotEquipped() then
+			goToBase()
+			-- If goToBase returned because brainrot was dropped mid-flight,
+			-- hasBrainrotEquipped() is now false and the next iteration will
+			-- immediately poll and pick it back up — no extra wait needed.
+			continue
+		end
+
+		if isDead then
+			handleRespawn(); isDead=false; hbFrame=0
+			if not isRunning() then break end
+			local t0=tick()
+			while tick()-t0<10 do
+				if getRoot() then break end
+				RunService.Heartbeat:Wait()
+			end
+		end
+
+		local root=getRoot()
+		if not root then RunService.Heartbeat:Wait(); continue end
+
+		-- ============================================================
+		-- NO TARGET — three phases, no teleportation anywhere
+		-- ============================================================
+		if not A.pollHasTarget then
+
+			-- PHASE 1: completely still — wait until timer unlocks (≤1s)
+			-- or a brainrot appears. No movement at all.
+			while isRunning() and not A.pollHasTarget and not shouldGoToCenter() do
+				RunService.Heartbeat:Wait()
+			end
+			if not isRunning() then break end
+			if A.pollHasTarget then continue end   -- brainrot appeared, handle it
+
+			-- PHASE 2: timer unlocked — fly smoothly to center.
+			-- Stop flying the moment a brainrot is detected by the poll.
+			local center=getCenterPos()
+			if center then
+				local hum=getHumanoid()
+				local r=getRoot()
+				if r and hum then
+					local _surfY=getBrainrotSpawnSurfaceY()
+					local groundY=_surfY and (_surfY+3) or A.START_POS.Y
+					local distToCenter=(Vector3.new(center.X,0,center.Z)-Vector3.new(r.Position.X,0,r.Position.Z)).Magnitude
+					if distToCenter>3 then
+						hum.PlatformStand=true
+						createBV(r)
+						flyToPos(
+							Vector3.new(center.X,groundY,center.Z),
+							A.flySpeed,
+							function() return isRunning() and not A.pollHasTarget end
+						)
+						destroyBV()
+						hum.PlatformStand=false
+					end
+				end
+			end
+			if not isRunning() then break end
+			if A.pollHasTarget then continue end   -- brainrot appeared mid-flight
+
+			-- PHASE 3: at (or near) center, stand still and wait for a brainrot.
+			-- No nudging, no CFrame writes at all.
+			while isRunning() and not A.pollHasTarget do
+				RunService.Heartbeat:Wait()
+			end
+			continue
+		end
+		-- ============================================================
+
+		local target=A.pollTarget
+		local targetPos=A.pollTargetPos
+		if not target or not targetPos then continue end
+
+		A.pollTargetGone=false
+
+		local function isRunningAndAlive()
+			return isRunning() and not A.pollTargetGone and not isDead
+		end
+
+		local picked=runModeNormal(target, targetPos, isRunningAndAlive)
+
+		if not isRunning() then destroyBV(); break end
+		if isDead then destroyBV(); continue end
+
+		if A.pollTargetGone or picked then
+			goToBase()
+		end
+
+		if not isRunning() then break end
+		-- No task.wait here — let the loop spin freely for fastest response
+	end
+
+	hbConn:Disconnect()
+	stopBrainrotTracker()
+	anchorChar(false); destroyBV()
+	local h2=getHumanoid(); if h2 then h2.PlatformStand=false end
+	A.task=nil
+end
+
+-- ============================================================
+-- startTempel — also gated by shouldGoToCenter so it never
+-- shoves the player toward center during the pre-start lobby.
+-- ============================================================
+local function startTempel()
+	if A.tempelConn then A.tempelConn:Disconnect(); A.tempelConn=nil end
+	A.tempelConn=RunService.Heartbeat:Connect(function()
+		if not A.enabled then return end
+		if A.pollHasTarget then return end
+		-- KEY FIX: do not move during pre-start lobby
+		if not shouldGoToCenter() then return end
+
+		local function findPlayerWithBrainrot()
+			for _,p in ipairs(Players:GetPlayers()) do
+				if p==player then continue end
+				local char=p.Character
+				if char then
+					for _,v in ipairs(char:GetChildren()) do
+						if v:IsA("Model") and CollectionService:HasTag(v,"ArenaBrainrot") then return p end
+					end
+				end
+				local pf=Workspace:FindFirstChild(p.Name)
+				if pf and pf:FindFirstChild("RenderedBrainrot") then return p end
+			end
+			return nil
+		end
+
+		local playerWithBrainrot=findPlayerWithBrainrot()
+		if playerWithBrainrot then
+			local targetChar=playerWithBrainrot.Character
+			local targetHRP=targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+			if not targetHRP then return end
+			local myRoot=getRoot(); if not myRoot then return end
+			local targetPos=targetHRP.Position; local myPos=myRoot.Position
+			local dist=(Vector3.new(targetPos.X,0,targetPos.Z)-Vector3.new(myPos.X,0,myPos.Z)).Magnitude
+			if dist>2 then
+				local dir=(Vector3.new(targetPos.X,myPos.Y,targetPos.Z)-myPos)
+				local step=math.min(dist,12)
+				pcall(function()
+					myRoot.CFrame=CFrame.new(
+						myPos+dir.Unit*step,
+						myPos+dir.Unit*step+(Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.LookVector or Vector3.new(0,0,-1))
+					)
+				end)
+			end
+		else
+			local center=getCenterPos(); if not center then return end
+			local myRoot=getRoot(); if not myRoot then return end
+			local _surfY=getBrainrotSpawnSurfaceY()
+			local groundY=_surfY and (_surfY+3) or A.START_POS.Y
+			local dist=(Vector3.new(center.X,0,center.Z)-Vector3.new(myRoot.Position.X,0,myRoot.Position.Z)).Magnitude
+			if dist>5 then
+				local dest=Vector3.new(center.X,groundY,center.Z)
+				local dir=(dest-myRoot.Position)
+				local step=math.min(dist,12)
+				pcall(function()
+					myRoot.CFrame=CFrame.new(
+						myRoot.Position+dir.Unit*step,
+						myRoot.Position+dir.Unit*step+(Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.LookVector or Vector3.new(0,0,-1))
+					)
+				end)
+			end
+		end
+	end)
+end
+
+task.spawn(function()
+	local char=player.Character or player.CharacterAdded:Wait()
+	local hrp=char:WaitForChild("HumanoidRootPart",10)
+	if hrp then A.START_POS=hrp.Position end
+	setupPlatform()
+	startNoclip()
+	startArenaPoll()
+	startTempel()
+	task.delay(3, function()
+		if not A.centerPos then A.centerPos=fetchCenterPos() end
+	end)
+end)
+
+-- ==================== UI CONTROLS ====================
+addToggle(col1, "Auto Arena", "F", false, function(state)
+	A.enabled=state
+	if state then
+		A.token=A.token+1
+		local token=A.token
+		A.task=task.spawn(function() arenaLoop(token) end)
+	else
+		A.token=A.token+1
+		if A.task then task.cancel(A.task); A.task=nil end
+		anchorChar(false)
+		destroyBV()
+		local hum=getHumanoid()
+		if hum then hum.PlatformStand=false end
+	end
+end)
+
+addSlider(col2, "Tween Speed", 50, 5000, A.flySpeed, function(val)
+	A.flySpeed=val
+end)
